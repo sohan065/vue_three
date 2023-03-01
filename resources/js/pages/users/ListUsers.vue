@@ -37,6 +37,9 @@
                         <th scope="col">ID</th>
                         <th scope="col">Name</th>
                         <th scope="col">Email</th>
+                        <th scope="col">Registration Date</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Options</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -44,6 +47,13 @@
                         <th>{{ index + 1 }}</th>
                         <td>{{ user.name }}</td>
                         <td>{{ user.email }}</td>
+                        <td>...</td>
+                        <td>...</td>
+                        <td>
+                            <a href="" @click.prevent="editUser(user)"
+                                ><i class="fa fa-edit"></i
+                            ></a>
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -63,7 +73,8 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="exampleModalLabel">
-                            User Form
+                            <span v-if="editing">Edit User</span>
+                            <span v-else>Add User</span>
                         </h5>
                         <button
                             type="button"
@@ -138,25 +149,38 @@ import { Field, Form } from "vee-validate";
 import * as yup from "yup";
 import { onMounted, reactive, ref } from "vue";
 const users = ref([]);
-const formData = reactive({
-    name: "",
-    email: "",
-    password: "",
-});
+const editing = ref(false);
+// const formData = reactive({
+//     name: "",
+//     email: "",
+//     password: "",
+// });
 const getUsers = () => {
     axios.get("/api/users").then(({ data }) => {
         console.log(data);
         users.value = data;
     });
 };
-
+const editUser = (user) => {
+    editing.value = true;
+    $("#createNewUser").modal("show");
+};
 const schema = yup.object({
     name: yup.string().required(),
     email: yup.string().email().required(),
     password: yup.string().min(4).required(),
 });
-const saveUser = (values) => {
-    console.log(values);
+const saveUser = (values, { resetForm }) => {
+    axios
+        .post("/api/user/create", values)
+        .then((response) => {
+            users.value.unshift(response.data);
+            $("#createNewUser").modal("hide");
+            resetForm();
+        })
+        .catch((error) => {
+            console.log(error);
+        });
 };
 // const saveUser = () => {
 //     console.log(formData);
