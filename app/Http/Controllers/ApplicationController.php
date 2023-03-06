@@ -20,6 +20,9 @@ class ApplicationController extends Controller
     }
     public function createUser(Request $request)
     {
+        $request->validate([
+            'email' => 'bail|required|unique:users,email',
+        ]);
 
         try {
             $result = User::create([
@@ -33,5 +36,24 @@ class ApplicationController extends Controller
             $result = false;
         }
         return $result;
+    }
+    public function updateUser(Request $request)
+    {
+
+        $email = $request->input('email');
+        try {
+            $result = User::where('email', $email)->update([
+                'name' => $request->input('name'),
+                'email' => $request->input('email'),
+
+            ]);
+        } catch (Exception $e) {
+            log::error($e);
+            $result = false;
+        }
+        if ($result) {
+            return response(['message' => 'updated'], 202);
+        }
+        return response(['message' => 'not acceptable'], 406);
     }
 }

@@ -26,8 +26,7 @@
             <button
                 type="button"
                 class="mb-2 btn btn-primary"
-                data-toggle="modal"
-                data-target="#createNewUser"
+                @click="addNewUser()"
             >
                 Add New User
             </button>
@@ -50,7 +49,7 @@
                         <td>...</td>
                         <td>...</td>
                         <td>
-                            <a href="" @click.prevent="editUser(user)"
+                            <a @click.prevent="editUser(user)"
                                 ><i class="fa fa-edit"></i
                             ></a>
                         </td>
@@ -60,10 +59,15 @@
         </div>
     </div>
     <!-- Modal -->
-    <Form @submit="saveUser" :validation-schema="schema" v-slot="{ errors }">
+    <Form
+        @submit="handleSubmit"
+        :validation-schema="editing ? editUserSchema : storeUserSchema"
+        v-slot="{ errors }"
+        :initial-values="formValues"
+    >
         <div
             class="modal fade"
-            id="createNewUser"
+            id="userForm"
             tabindex="-1"
             role="dialog"
             aria-labelledby="exampleModalLabel"
@@ -148,38 +152,87 @@ import axios from "axios";
 import { Field, Form } from "vee-validate";
 import * as yup from "yup";
 import { onMounted, reactive, ref } from "vue";
+import { useToastr } from "../../toasts";
+
+const toastr = useToastr();
 const users = ref([]);
 const editing = ref(false);
+const formValues = ref();
+
 // const formData = reactive({
 //     name: "",
 //     email: "",
 //     password: "",
 // });
+
+const handleSubmit = (values, actions) => {
+    if (editing.value) {
+        updateUser(values, actions);
+    } else {
+        storeUser(values, actions);
+    }
+};
+const addNewUser = () => {
+    editing.value = false;
+    $("#userForm").modal("show");
+};
 const getUsers = () => {
     axios.get("/api/users").then(({ data }) => {
-        console.log(data);
         users.value = data;
     });
 };
 const editUser = (user) => {
     editing.value = true;
-    $("#createNewUser").modal("show");
+    $("#userForm").modal("show");
+    formValues.value = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+    };
 };
-const schema = yup.object({
+const storeUserSchema = yup.object({
     name: yup.string().required(),
     email: yup.string().email().required(),
     password: yup.string().min(4).required(),
 });
-const saveUser = (values, { resetForm }) => {
+const editUserSchema = yup.object({
+    name: yup.string().required(),
+    email: yup.string().email().required(),
+    password: yup.string().min(4).required(),
+});
+
+const updateUser = (values, { resetForm }) => {
     axios
-        .post("/api/user/create", values)
+        .post("/api/user/update", values)
         .then((response) => {
-            users.value.unshift(response.data);
-            $("#createNewUser").modal("hide");
+            // users.value.unshift(response.data);
+            console.log(response);
+            $("#userForm").modal("hide");
+
             resetForm();
         })
         .catch((error) => {
             console.log(error);
+        })
+        .finally
+        // (formValues.value = {
+        //     id: "",
+        //     name: "",
+        //     email: "",
+        // })
+        ();
+};
+const storeUser = (values, { resetForm, setErrors }) => {
+    axios
+        .post("/api/user/create", values)
+        .then((response) => {
+            users.value.unshift(response.data);
+            toastr.success("success");
+            $("#userForm").modal("hide");
+            resetForm();
+        })
+        .catch((error) => {
+            setErrors(error.response.data.errors);
         });
 };
 // const saveUser = () => {
